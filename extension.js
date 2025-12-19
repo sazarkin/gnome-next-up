@@ -55,6 +55,8 @@ export default class NextUpExtension extends Extension {
         this.loadIndicator();
         // Set up the refresh callback to listen to calendar changes
         this._indicator.setRefreshCallback(this.refreshIndicator.bind(this));
+        // Do initial refresh immediately
+        this.refreshIndicator();
         this._startLoop();
 
         return false;
