@@ -53,6 +53,8 @@ export default class NextUpExtension extends Extension {
       3,
       () => {
         this.loadIndicator();
+        // Set up the refresh callback to listen to calendar changes
+        this._indicator.setRefreshCallback(this.refreshIndicator.bind(this));
         this._startLoop();
 
         return false;
@@ -61,9 +63,11 @@ export default class NextUpExtension extends Extension {
   }
 
   _startLoop() {
+    // Reduced frequency: only for time-based updates ("In 5 min" -> "In 4 min")
+    // Calendar changes are handled by the 'changed' signal
     this.sourceId = GLib.timeout_add_seconds(
       GLib.PRIORITY_DEFAULT,
-      5, // seconds to wait
+      30, // Check every 30 seconds for time updates
       () => {
         this.refreshIndicator();
 

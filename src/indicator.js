@@ -1,7 +1,7 @@
 import St from "gi://St";
+import Shell from 'gi://Shell';
 import Clutter from "gi://Clutter";
 import * as Calendar from "resource:///org/gnome/shell/ui/calendar.js";
-import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
@@ -61,6 +61,28 @@ export default class Indicator extends PanelMenu.Button {
     this.menu.addMenuItem(settingsItem);
   }
 
+  setRefreshCallback(callback) {
+    this._refreshCallback = callback;
+    // Listen to calendar changes
+    this._calendarChangedId = this._calendarSource.connect('changed', () => {
+      if (this._refreshCallback) {
+        this._refreshCallback();
+      }
+    });
+  }
+
+  destroy() {
+    if (this._calendarChangedId) {
+      this._calendarSource.disconnect(this._calendarChangedId);
+      this._calendarChangedId = null;
+    }
+    if (this._calendarSource) {
+      this._calendarSource.destroy();
+      this._calendarSource = null;
+    }
+    super.destroy();
+  }
+
   setText(text) {
     this.text.set_text(text);
   }
@@ -75,15 +97,19 @@ export default class Indicator extends PanelMenu.Button {
 
   vfunc_event(event) {
     if (
-      event.type() == Clutter.EventType.TOUCH_END ||
-      event.type() == Clutter.EventType.BUTTON_RELEASE
+      event.type() === Clutter.EventType.TOUCH_END ||
+      event.type() === Clutter.EventType.BUTTON_RELEASE
     ) {
       if (event.get_button() === Clutter.BUTTON_PRIMARY) {
-        // Show calendar on left click
-        if (this.menu.isOpen) {
-          this.menu._getTopMenu().close();
-        } else {
-          Main.panel.toggleCalendar();
+        try {
+          const appSystem = Shell.AppSystem.get_default();
+          const app = appSystem.lookup_app('org.gnome.Calendar.desktop');
+
+          if (app) {
+            app.activate();
+          }
+        } catch (e) {
+          console.error('Failed to launch GNOME Calendar:', e);
         }
       } else {
         // Show settings menu on right click
